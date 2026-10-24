@@ -83,10 +83,10 @@ body,
   font-weight: 500;
 }
 
-/* 行高只作用于文字段落，避免撑开按钮、工具栏和代码行号。 */
-:where(.prose, .standard-markdown, [data-testid="user-message"], [contenteditable="true"])
-  :where(p, li, blockquote):not(:where(pre *, .katex *, .MathJax *, mjx-container *)),
-#static-composer-input {
+/* 消息段落使用阅读行高；输入框保留原生行高与垂直对齐。 */
+:where(.prose, .standard-markdown, [data-testid="user-message"])
+  :where(p, li, blockquote):not(:where(pre *, .katex *, .MathJax *, mjx-container *,
+    [contenteditable="true"], [contenteditable="true"] *, #static-composer-input, #static-composer-input *)) {
   line-height: 1.8 !important;
 }
 

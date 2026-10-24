@@ -14,6 +14,14 @@ p.innerHTML = '<span id="zoom-label">Text</span><span id="zoom-icon" style="font
 d.getElementById('response').append(p);
 const size = id => parseFloat(w.getComputedStyle(d.getElementById(id)).fontSize);
 const width = id => d.getElementById(id).getBoundingClientRect().width;
+const editor = d.createElement('div');
+editor.contentEditable='true'; editor.className='prose'; editor.style.lineHeight='1.5';
+editor.innerHTML='<p id="empty-editor" data-placeholder="Type / for commands"><br></p>';
+d.body.append(editor);
+const placeholderStyle=d.createElement('style');
+placeholderStyle.textContent='[data-placeholder]::before {content:attr(data-placeholder);float:left;height:0;pointer-events:none}';
+d.head.append(placeholderStyle);
+const emptyBase=size('empty-editor');
 const ids = ['body-text','body-bold','heading-text','code-token','composer-text','sidebar-text','zoom-icon','zoom-svg','math-text'];
 const before = Object.fromEntries(ids.map(id => [id,size(id)]));
 const svgWidth = width('zoom-svg'), sidebarWidth = width('sidebar-text');
@@ -31,6 +39,9 @@ for (const id of ids) {
   check(id, Math.abs(size(id)-before[id]*(scaled?1.2:1))<0.02);
 }
 check('icon and sidebar dimensions', width('zoom-svg')===svgWidth && width('sidebar-text')===sidebarWidth);
+check('empty editor placeholder scales with text', Math.abs(size('empty-editor')-emptyBase*1.2)<0.02);
+check('editor keeps native line height', Math.abs(parseFloat(w.getComputedStyle(d.getElementById('empty-editor')).lineHeight)-size('empty-editor')*1.5)<0.02);
+check('placeholder inherits editor size', w.getComputedStyle(d.getElementById('empty-editor'),'::before').fontSize===w.getComputedStyle(d.getElementById('empty-editor')).fontSize);
 check('stored 120%', w.localStorage.getItem(key)==='120');
 await load();
 check('reinstall restores 120% without compounding', Math.abs(size('body-text')-before['body-text']*1.2)<0.02);

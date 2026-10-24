@@ -46,7 +46,7 @@ ScriptCat 可检查更新并下载新脚本；更新检查频率及是否静默�
 | `--claude-restyle-code-font` | Cascadia Code NF，启用连字；中文沿用正文映射 |
 | `--claude-restyle-ui-font` | UI／侧栏英文 Oxanium → Pridi；中文使用系统字体 |
 
-正文默认 `500` 字重，段落行高 `1.8`；保留加粗、斜体和标题字号层级。
+正文默认 `500` 字重，消息段落行高 `1.8`（输入框保留原生行高）；保留加粗、斜体和标题字号层级。
 
 ### 文字缩放快捷键
 
@@ -125,7 +125,7 @@ mkdir -p artifacts
 node --input-type=module -e 'import {readBrowserPayload} from "./scripts/build-userscript.mjs"; import {writeFile} from "node:fs/promises"; await writeFile("artifacts/zoom-fixture.js", await readBrowserPayload("fixture"));'
 ```
 
-打开 `http://127.0.0.1:8765/tests/fixtures/zoom.html`，应显示 `19/19 passed`。
+打开 `http://127.0.0.1:8765/tests/fixtures/zoom.html`，应显示 `22/22 passed`。
 覆盖字号比例、图标与侧栏尺寸、持久化、重新注入、动态内容、底部滚动稳定性、重置及清理。
 该测试只在 localhost 的通用样例页面运行，不访问 Claude 会话。
 

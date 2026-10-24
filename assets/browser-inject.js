@@ -67,7 +67,10 @@
         const directText = [...element.childNodes].filter(node => node.nodeType === 3).map(node => node.textContent).join("");
         const iconText = /[\uE000-\uF8FF\u{F0000}-\u{FFFFD}\u{100000}-\u{10FFFD}]/u.test(directText);
         const excluded = element.closest(EXCLUDED) || /icon|symbol/i.test(computed.fontFamily) || iconText;
-        const isText = directText.trim() || element.matches('[contenteditable="true"], textarea, input');
+        // Empty editor paragraphs render the placeholder via ::before; they must
+        // share the editor's scale even though they contain only a <br>.
+        const editorParagraph = element.matches("p") && element.closest('[contenteditable="true"]');
+        const isText = directText.trim() || editorParagraph || element.matches('[contenteditable="true"], textarea, input');
         const size = base * (!excluded && isText ? percent / 100 : 1);
         measurements.push([element, size, !excluded && Boolean(isText)]);
       }
