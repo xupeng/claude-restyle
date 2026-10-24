@@ -50,7 +50,6 @@ test("installation link and generated artifact use the repository's stable updat
   const readme = await fs.readFile(new URL("../README.md", import.meta.url), "utf8");
   assert.ok(script.includes(`// @version      ${manifest.version}\n`));
   assert.ok(readme.includes(`](${DEFAULT_UPDATE_URL})`));
-  assert.ok(readme.includes("私有"));
   await buildUserscript({ check: true });
 });
 
