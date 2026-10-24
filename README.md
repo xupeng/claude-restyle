@@ -125,8 +125,8 @@ mkdir -p artifacts
 node --input-type=module -e 'import {readBrowserPayload} from "./scripts/build-userscript.mjs"; import {writeFile} from "node:fs/promises"; await writeFile("artifacts/zoom-fixture.js", await readBrowserPayload("fixture"));'
 ```
 
-打开 `http://127.0.0.1:8765/tests/fixtures/zoom.html`，应显示 `16/16 passed`。
-覆盖字号比例、图标与侧栏尺寸、持久化、重新注入、动态内容、重置及清理。
+打开 `http://127.0.0.1:8765/tests/fixtures/zoom.html`，应显示 `19/19 passed`。
+覆盖字号比例、图标与侧栏尺寸、持久化、重新注入、动态内容、底部滚动稳定性、重置及清理。
 该测试只在 localhost 的通用样例页面运行，不访问 Claude 会话。
 
 ### 发布更新

@@ -38,6 +38,31 @@ const dynamic = d.createElement('p'); dynamic.id='zoom-dynamic'; dynamic.textCon
 d.getElementById('response').append(dynamic);
 await new Promise(resolve => setTimeout(resolve,200));
 check('dynamic content', Math.abs(size('zoom-dynamic')-before['body-text']*1.2)<0.02);
+// Simulate bottom-of-page scroll UI updates without adding message content.
+const scroller = d.createElement('div');
+scroller.style.cssText='height:120px;overflow:auto';
+const content = d.createElement('div'); content.className='prose';
+content.innerHTML=Array.from({length:40},()=>'<p>Scroll regression text</p>').join('');
+scroller.append(content); d.body.append(scroller);
+await new Promise(resolve => setTimeout(resolve,200));
+scroller.scrollTop=scroller.scrollHeight;
+const bottom=scroller.scrollTop;
+let writes=0;
+const watcher=new w.MutationObserver(records=>{writes+=records.length;});
+watcher.observe(content,{subtree:true,attributes:true,attributeFilter:['style']});
+const control=d.createElement('button'); d.body.append(control);
+for(let i=0;i<5;i++) {
+  control.className=`scroll-state-${i}`; control.style.opacity=String(i/5);
+  control.textContent=`Bottom ${i}`;
+  await new Promise(resolve=>setTimeout(resolve,100));
+}
+check('scroll UI updates do not rewrite font sizes', writes===0);
+check('bottom scroll remains stable', Math.abs(scroller.scrollTop-bottom)<1);
+watcher.disconnect();
+const extra=d.createElement('p');extra.textContent='New streamed paragraph';content.append(extra);
+await new Promise(resolve=>setTimeout(resolve,200));
+check('new content preserves scroll offset', Math.abs(scroller.scrollTop-bottom)<1);
+scroller.remove();control.remove();
 press('Digit0');
 check('reset', ids.every(id => Math.abs(size(id)-before[id])<0.02));
 press('Equal');

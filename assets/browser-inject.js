@@ -35,12 +35,20 @@
     originals.clear();
   };
   const observe = () => observer.observe(document.body, {
-    subtree: true, childList: true, characterData: true, attributes: true,
-    attributeFilter: ["class", "style", "contenteditable"],
+    subtree: true, childList: true,
+
   });
   const apply = () => {
     if (!active) return;
     observer.disconnect();
+    // Restoring baseline sizes can temporarily shrink the document and clamp scrollTop.
+    // Preserve scroll containers across this synchronous measurement pass.
+    const scrollPositions = new Map();
+    for (const root of document.querySelectorAll(ROOTS)) {
+      for (let node = root; node; node = node.parentElement) {
+        if (node.scrollTop || node.scrollLeft) scrollPositions.set(node, [node.scrollTop, node.scrollLeft]);
+      }
+    }
     restore();
     if (percent !== 100) {
       const elements = new Set();
@@ -61,20 +69,37 @@
         const excluded = element.closest(EXCLUDED) || /icon|symbol/i.test(computed.fontFamily) || iconText;
         const isText = directText.trim() || element.matches('[contenteditable="true"], textarea, input');
         const size = base * (!excluded && isText ? percent / 100 : 1);
-        measurements.push([element, size]);
+        measurements.push([element, size, !excluded && Boolean(isText)]);
       }
-      for (const [element, size] of measurements) {
+      for (const [element, size, scaledText] of measurements) {
         const original = { value: element.style.getPropertyValue("font-size"), priority: element.style.getPropertyPriority("font-size") };
         element.style.setProperty("font-size", `${size}px`, "important");
         original.applied = element.style.getPropertyValue("font-size");
+        original.scaledText = scaledText;
         originals.set(element, original);
       }
     }
+    for (const [node, [top, left]] of scrollPositions) {
+      node.scrollTop = top;
+      node.scrollLeft = left;
+    }
     observe();
   };
-  const observer = new MutationObserver(() => {
-    // Batch streaming updates; never observe our own style writes.
-    if (timer === undefined) timer = setTimeout(() => { timer = undefined; apply(); }, 80);
+  const observer = new MutationObserver(records => {
+    // Scroll controls, sticky headers and virtualizer style/class updates must not
+    // trigger font restoration: doing so can create a resize/scroll feedback loop.
+    // Existing text nodes already have the correct size while tokens stream in.
+    if (percent === 100) return;
+    const needsSizing = records.some(record => [...record.addedNodes].some(node => {
+      if (node.nodeType === 1) {
+        return node.matches(ROOTS) || node.closest(ROOTS) || node.querySelector(ROOTS);
+      }
+      return node.nodeType === 3 && record.target.closest?.(ROOTS)
+        && !originals.get(record.target)?.scaledText;
+    }));
+    if (needsSizing && timer === undefined) {
+      timer = setTimeout(() => { timer = undefined; apply(); }, 80);
+    }
   });
   const announce = () => {
     if (!toast) {
