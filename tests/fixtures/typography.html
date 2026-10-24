@@ -8,7 +8,8 @@
     body { margin: 0; color: #292822; background: #faf9f5; font-family: sans-serif; }
     .layout { display: grid; grid-template-columns: 240px minmax(0, 780px); gap: 40px; max-width: 1120px; margin: 36px auto; padding: 0 24px; }
     aside { padding: 24px; border-radius: 16px; background: #f0eee6; }
-    aside a { display: block; margin: 18px 0; font: 400 14px/20px sans-serif; }
+    aside a { display: block; margin: 18px 0; font-size: 14px; font-weight: 400; line-height: 20px; }
+    .fixture-icon { font-family: "Fixture Icons", monospace; }
     main { min-width: 0; }
     h1 { margin: 0 0 16px; }
     h2 { margin-top: 32px; }
@@ -30,6 +31,8 @@
     <aside aria-label="Sidebar" class="font-control">
       <h2>Claude Restyle</h2>
       <a id="sidebar-text">Recent chats · 最近对话</a>
+      <a><span class="fixture-icon" id="sidebar-icon">&#xe001;</span> Icon font</a>
+      <div class="fixture-icon" id="sidebar-icon-wrapper"><span id="sidebar-icon-child">&#xe002;</span></div>
       <a>字体与阅读 Typography</a>
       <a>代码 Code</a>
       <button class="font-sans" id="ui-button">New chat</button>
@@ -70,6 +73,9 @@ console.log(greet("Claude"));</code></pre>
     check("math root preserved", style("math-root").fontFamily.includes("Times New Roman"));
     check("math descendant preserved", style("math-text").fontFamily.includes("Times New Roman"));
     check("sidebar system CJK", !style("sidebar-text").fontFamily.includes("RestyleBodyCJK"));
+    for (const id of ["sidebar-icon", "sidebar-icon-wrapper", "sidebar-icon-child"]) {
+      check(`${id}: icon font preserved`, style(id).fontFamily.includes("Fixture Icons"));
+    }
     check("sidebar font and metrics", style("sidebar-text").fontFamily.includes("Oxanium") && style("sidebar-text").fontSize === "14px" && style("sidebar-text").lineHeight === "20px");
     // Model the extra nodes created by a streaming response or a SPA transition.
     const paragraph = document.createElement("p");

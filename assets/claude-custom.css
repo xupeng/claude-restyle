@@ -58,11 +58,11 @@
   --claude-restyle-ui-font: "Oxanium", "Pridi", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-/* UI 只换字体，不修改字号、行高、尺寸或主题颜色。 */
+/* UI 字体从容器继承。不要覆盖后代 span/div 的 font-family：
+   Claude 的字体图标需要保留自身字体，否则会显示为缺字条纹。 */
 body,
 :where(.font-sans, .font-control, .font-voice),
-:where(aside[aria-label="Sidebar"], [data-testid="sidebar"]),
-:where(aside[aria-label="Sidebar"], [data-testid="sidebar"]) :where(a, button, span, div, p, input) {
+:where(aside[aria-label="Sidebar"], [data-testid="sidebar"]) {
   font-family: var(--claude-restyle-ui-font) !important;
 }
 
