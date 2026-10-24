@@ -1,0 +1,114 @@
+/* 字体搭配沿用 notion-restyle；修改下方四个变量后重新构建用户脚本。 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&family=Oxanium:wght@200..800&family=Pridi:wght@200;300;400;500;600;700&family=Signika:wght@300..700&display=swap');
+
+@font-face {
+  font-family: "ClaudeRestyleBodyCJK";
+  src: local("LXGWWenKai-Light");
+  font-weight: 100 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ClaudeRestyleBodyCJK";
+  src: local("LXGWWenKai-Medium");
+  font-weight: 301 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ClaudeRestyleBodyCJK";
+  src: local("LXGW ZhenKai GB"), local("LXGWZhenKaiGB"), local("LXGW ZhenKai"), local("LXGWZhenKai-Regular");
+  font-weight: 501 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ClaudeRestyleHeadingCJK";
+  src: local("TsangerYunHei-W04");
+  font-weight: 100 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ClaudeRestyleHeadingCJK";
+  src: local("TsangerYunHei-W05");
+  font-weight: 401 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ClaudeRestyleHeadingCJK";
+  src: local("TsangerYunHei-W06");
+  font-weight: 501 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ClaudeRestyleHeadingCJK";
+  src: local("TsangerYunHei-W07");
+  font-weight: 601 900;
+  font-display: swap;
+}
+
+:root {
+  --claude-restyle-body-font: "Oxanium", "Pridi", "ClaudeRestyleBodyCJK", "Noto Sans SC", STKaiti, system-ui, sans-serif;
+  --claude-restyle-heading-font: "Signika", "ClaudeRestyleHeadingCJK", "Noto Sans SC", "PingFang SC", sans-serif;
+  --claude-restyle-code-font: "Cascadia Code NF", "Cascadia Code", Consolas, "ClaudeRestyleBodyCJK", "Noto Sans SC", monospace;
+  /* UI / 侧栏不引入自定义中文字体，保留系统中文。 */
+  --claude-restyle-ui-font: "Oxanium", "Pridi", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* UI 只换字体，不修改字号、行高、尺寸或主题颜色。 */
+body,
+:where(.font-sans, .font-control, .font-voice),
+:where(aside[aria-label="Sidebar"], [data-testid="sidebar"]),
+:where(aside[aria-label="Sidebar"], [data-testid="sidebar"]) :where(a, button, span, div, p, input) {
+  font-family: var(--claude-restyle-ui-font) !important;
+}
+
+/* 普通 Chat 与网页 Code 共用消息锚点；旧版字体类名作为兼容入口。
+   不使用哈希类名，也不改变 Artifacts iframe 中的内容。 */
+:where(.prose, .standard-markdown, .font-claude-response, .font-claude-message,
+  [data-testid="user-message"], [contenteditable="true"], #static-composer-input),
+:where(.prose, .standard-markdown, .font-claude-response, .font-claude-message,
+  [data-testid="user-message"], [contenteditable="true"])
+  :where(p, span, div, a, li, ul, ol, blockquote, td, th, strong, b, em, i, del, summary, label):not(
+    :where(pre *, code *, kbd *, samp *, .katex, .katex *, .MathJax, .MathJax *, mjx-container, mjx-container *)
+  ) {
+  font-family: var(--claude-restyle-body-font) !important;
+}
+
+:where(.prose, .standard-markdown, .font-claude-response, .font-claude-message,
+  [data-testid="user-message"], [contenteditable="true"], #static-composer-input) {
+  font-weight: 500;
+}
+
+/* 行高只作用于文字段落，避免撑开按钮、工具栏和代码行号。 */
+:where(.prose, .standard-markdown, [data-testid="user-message"], [contenteditable="true"])
+  :where(p, li, blockquote):not(:where(pre *, .katex *, .MathJax *, mjx-container *)),
+#static-composer-input {
+  line-height: 1.8 !important;
+}
+
+:where(.prose, .standard-markdown, [data-testid="user-message"], [contenteditable="true"])
+  :where(strong, b):not(:where(pre *, code *, .katex *, .MathJax *, mjx-container *)) {
+  font-weight: 700 !important;
+}
+
+/* 标题后置，覆盖标题内嵌的链接、强调等元素；内嵌 code 仍用等宽字体。 */
+:where(.prose, .standard-markdown) :where(h1, h2, h3, h4, h5, h6),
+:where(.prose, .standard-markdown) :where(h1, h2, h3, h4, h5, h6)
+  :where(span, a, strong, b, em, i),
+main > :where(h1, h2),
+[role="toolbar"] :where(h1, h2),
+[role="toolbar"] :where(h1, h2) :where(button, span) {
+  font-family: var(--claude-restyle-heading-font) !important;
+}
+
+/* 内联代码、代码块及网页代码编辑器。公式和 SVG 图标不应用通配字体。 */
+:where(pre, code, kbd, samp, .font-mono, .cm-editor, .monaco-editor),
+:where(pre, code, kbd, samp, .font-mono, .cm-editor, .monaco-editor)
+  :where(span, div, code, p, textarea):not(:where(.katex *, .MathJax *, mjx-container *)) {
+  font-family: var(--claude-restyle-code-font) !important;
+  font-feature-settings: "liga" 1, "calt" 1;
+}

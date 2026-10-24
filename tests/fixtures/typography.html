@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Restyle · 字体验证</title>
+  <style>
+    body { margin: 0; color: #292822; background: #faf9f5; font-family: sans-serif; }
+    .layout { display: grid; grid-template-columns: 240px minmax(0, 780px); gap: 40px; max-width: 1120px; margin: 36px auto; padding: 0 24px; }
+    aside { padding: 24px; border-radius: 16px; background: #f0eee6; }
+    aside a { display: block; margin: 18px 0; font: 400 14px/20px sans-serif; }
+    main { min-width: 0; }
+    h1 { margin: 0 0 16px; }
+    h2 { margin-top: 32px; }
+    p { font-size: 17px; }
+    button { padding: 8px 12px; }
+    pre { padding: 20px; border-radius: 12px; overflow-x: auto; background: #efede6; line-height: 1.6; }
+    code { background: #efede6; }
+    textarea, [contenteditable] { box-sizing: border-box; width: 100%; padding: 18px; border: 1px solid #d0ccc1; border-radius: 16px; background: white; font-size: 16px; }
+    .katex { font-family: "Times New Roman", serif; }
+    .katex .mathnormal { font-family: "Times New Roman", serif; font-style: italic; }
+    #results { padding: 16px; border-radius: 12px; background: #e8eee1; white-space: pre-wrap; font: 13px/1.6 monospace; }
+    #results[data-status="fail"] { background: #ffe0df; }
+    @media (max-width: 700px) { .layout { grid-template-columns: minmax(0, 1fr); } aside { display: none; } }
+  </style>
+  <link rel="stylesheet" href="../../assets/claude-custom.css">
+</head>
+<body>
+  <div class="layout">
+    <aside aria-label="Sidebar" class="font-control">
+      <h2>Claude Restyle</h2>
+      <a id="sidebar-text">Recent chats · 最近对话</a>
+      <a>字体与阅读 Typography</a>
+      <a>代码 Code</a>
+      <button class="font-sans" id="ui-button">New chat</button>
+    </aside>
+    <main>
+      <div role="toolbar"><h1><button>Claude Restyle · 字体验证</button></h1></div>
+      <div data-testid="user-message"><p id="user-text">中文字体与 English typography，沿用 Notion Restyle 的搭配。</p></div>
+      <article class="prose" id="response">
+        <div class="standard-markdown">
+          <h2><a id="heading-text">标题 Heading <strong id="heading-bold">加粗</strong> <code id="heading-code">code()</code></a></h2>
+          <p id="body-text">普通正文使用霞鹜文楷，English 使用 Oxanium，<strong id="body-bold">粗体中文使用霞鹜臻楷</strong>，<em id="body-italic">保留 italic 斜体</em>。</p>
+          <p>内联代码 <code id="inline-code"><span>const answer = 42;</span></code> 与正文区分。</p>
+          <pre id="code-block"><code><span id="code-token">const greet = (name) =&gt; `Hello, ${name}`; // 中文注释</span>
+console.log(greet("Claude"));</code></pre>
+          <p>公式字体保持原样：<span class="katex" id="math-root"><span class="mathnormal" id="math-text">E = mc²</span></span></p>
+        </div>
+      </article>
+      <div class="ProseMirror" contenteditable="true" role="textbox" aria-label="Prompt"><p id="composer-text">输入框 Prompt · 中文和 English</p></div>
+      <h2>检查结果</h2>
+      <div id="results" role="status">正在检查…</div>
+    </main>
+  </div>
+  <script type="module">
+    const assertions = [];
+    const style = id => getComputedStyle(document.getElementById(id));
+    const check = (label, passed) => assertions.push({ label, passed });
+    for (const id of ["body-text", "user-text", "composer-text"]) {
+      check(`${id}: body font`, style(id).fontFamily.includes("ClaudeRestyleBodyCJK"));
+    }
+    check("bold semantic weight", style("body-bold").fontWeight === "700");
+    check("italic semantic style", style("body-italic").fontStyle === "italic");
+    for (const id of ["heading-text", "heading-bold"]) {
+      check(`${id}: heading font`, style(id).fontFamily.includes("ClaudeRestyleHeadingCJK"));
+    }
+    for (const id of ["inline-code", "code-token", "heading-code"]) {
+      check(`${id}: code font`, style(id).fontFamily.includes("Cascadia Code NF"));
+    }
+    check("math root preserved", style("math-root").fontFamily.includes("Times New Roman"));
+    check("math descendant preserved", style("math-text").fontFamily.includes("Times New Roman"));
+    check("sidebar system CJK", !style("sidebar-text").fontFamily.includes("RestyleBodyCJK"));
+    check("sidebar font and metrics", style("sidebar-text").fontFamily.includes("Oxanium") && style("sidebar-text").fontSize === "14px" && style("sidebar-text").lineHeight === "20px");
+    // Model the extra nodes created by a streaming response or a SPA transition.
+    const paragraph = document.createElement("p");
+    paragraph.id = "dynamic-text";
+    paragraph.textContent = "动态内容 / Streaming content 自动继承字体。";
+    document.getElementById("response").append(paragraph);
+    check("dynamic content", style("dynamic-text").fontFamily.includes("ClaudeRestyleBodyCJK"));
+    const result = document.getElementById("results");
+    result.dataset.status = assertions.every(a => a.passed) ? "pass" : "fail";
+    result.textContent = `${assertions.filter(a => a.passed).length}/${assertions.length} passed\n` + assertions.map(a => `${a.passed ? "✓" : "✗"} ${a.label}`).join("\n");
+  </script>
+</body>
+</html>
