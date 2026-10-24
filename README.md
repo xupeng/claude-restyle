@@ -46,8 +46,26 @@ ScriptCat 可检查更新并下载新脚本；更新检查频率及是否静默�
 | `--claude-restyle-code-font` | Cascadia Code NF，启用连字；中文沿用正文映射 |
 | `--claude-restyle-ui-font` | UI／侧栏英文 Oxanium → Pridi；中文使用系统字体 |
 
-正文默认 `500` 字重，段落行高 `1.8`；保留加粗、斜体和标题字号层级。脚本不添加
-缩放快捷键，也不修改页面宽度、主题颜色、按钮大小或浏览器缩放。
+正文默认 `500` 字重，段落行高 `1.8`；保留加粗、斜体和标题字号层级。
+
+### 文字缩放快捷键
+
+沿用 notion-restyle 的快捷键（macOS 也使用 Control，不是 Command）：
+
+| 快捷键 | 操作 |
+| --- | --- |
+| `Ctrl + Shift + =` / 小键盘 `+` | 放大 5% |
+| `Ctrl + Shift + -` / 小键盘 `-` | 缩小 5% |
+| `Ctrl + Shift + 0` | 恢复 100% |
+
+小键盘同样需要按住 `Ctrl + Shift`。范围 60%–160%，在输入框内也可操作，
+输入法组合输入期间不拦截。屏幕右下角短暂显示当前比例。
+
+只调整消息正文、标题、代码和输入框的文字字号，不使用页面 `zoom` 或 `transform`，
+不修改栏宽、侧栏、工具栏、图标或公式尺寸。文字会按新字号自然换行，内容高度可能变化。
+设置保存在当前浏览器配置的 Claude 网站 `localStorage`，刷新、页面切换及脚本更新后保留，
+同源标签页同步；清理网站数据会重置。存储不可用时仍可在当前页缩放。
+停用菜单会恢复原字号，保留已记住的比例供下次加载使用。
 
 Google Fonts 加载 Oxanium、Pridi、Signika 和 Noto Sans SC，需要网络连接；
 若希望完全离线使用，删除顶部 `@import` 并将变量改为本机字体。
@@ -63,7 +81,8 @@ Google Fonts 加载 Oxanium、Pridi、Signika 和 Noto Sans SC，需要网络连
 与字体文件是上述 Google Fonts 网络请求的例外。
 
 CSS 会自动作用于流式回复和 SPA 切换后的新内容，不读取会话数据，不使用页面内部
-对象或轮询。Claude 更改 DOM 锚点后，可能需要更新 CSS 选择器。
+对象或轮询。字号缩放使用 MutationObserver 合并处理动态内容，避免嵌套文字重复缩放。
+Claude 更改 DOM 锚点后，可能需要更新选择器。
 
 ## 构建与验证
 
@@ -92,10 +111,23 @@ python3 -m http.server 8765 --bind 127.0.0.1
 `claude.ai` 页面上的最终效果仍需浏览器验证。
 
 本次验证：在已登录 Vivaldi 的普通 Chat 与网页 Code 中只读确认 DOM 锚点；
-内置浏览器的本地测试页通过 15 项排版检查。当前 `npm test` 另包含安装链接、
+内置浏览器的本地测试页通过 18 项排版检查。当前 `npm test` 另包含安装链接、
 默认更新地址与版本一致性检查。
 自动安装因浏览器工具禁止访问 `chrome-extension://` 管理页而未完成；
 需按上述步骤手动安装后刷新 Claude，检查实际字体加载和页面效果。
+
+### 缩放回归测试
+
+先生成仅供本地测试使用的运行脚本，再启动上面的 HTTP 服务：
+
+```bash
+mkdir -p artifacts
+node --input-type=module -e 'import {readBrowserPayload} from "./scripts/build-userscript.mjs"; import {writeFile} from "node:fs/promises"; await writeFile("artifacts/zoom-fixture.js", await readBrowserPayload("fixture"));'
+```
+
+打开 `http://127.0.0.1:8765/tests/fixtures/zoom.html`，应显示 `16/16 passed`。
+覆盖字号比例、图标与侧栏尺寸、持久化、重新注入、动态内容、重置及清理。
+该测试只在 localhost 的通用样例页面运行，不访问 Claude 会话。
 
 ### 发布更新
 

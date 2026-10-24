@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Claude Restyle text zoom regression</title>
+<pre id="results">Running…</pre>
+<iframe src="typography.html" style="width:1100px;height:900px"></iframe>
+<script type="module">
+const frame = document.querySelector('iframe');
+await new Promise(resolve => frame.addEventListener('load', resolve, {once:true}));
+const w = frame.contentWindow, d = w.document;
+const key = 'claude-restyle.textZoomPercent.v1';
+w.localStorage.removeItem(key);
+const p = d.createElement('p');
+p.innerHTML = '<span id="zoom-label">Text</span><span id="zoom-icon" style="font-family:FixtureIcons">&#xe001;</span><svg id="zoom-svg" width="1em" height="1em" aria-hidden="true"></svg>';
+d.getElementById('response').append(p);
+const size = id => parseFloat(w.getComputedStyle(d.getElementById(id)).fontSize);
+const width = id => d.getElementById(id).getBoundingClientRect().width;
+const ids = ['body-text','body-bold','heading-text','code-token','composer-text','sidebar-text','zoom-icon','zoom-svg','math-text'];
+const before = Object.fromEntries(ids.map(id => [id,size(id)]));
+const svgWidth = width('zoom-svg'), sidebarWidth = width('sidebar-text');
+const load = () => new Promise(resolve => {
+  const script = d.createElement('script');
+  script.src = '../../artifacts/zoom-fixture.js'; script.onload = resolve; d.body.append(script);
+});
+await load();
+const checks = [];
+const check = (label, ok) => checks.push({label,ok});
+const press = code => w.dispatchEvent(new w.KeyboardEvent('keydown', {code,ctrlKey:true,shiftKey:true,bubbles:true,cancelable:true}));
+for (let i=0;i<4;i++) press('Equal');
+for (const id of ids) {
+  const scaled = ['body-text','body-bold','heading-text','code-token','composer-text'].includes(id);
+  check(id, Math.abs(size(id)-before[id]*(scaled?1.2:1))<0.02);
+}
+check('icon and sidebar dimensions', width('zoom-svg')===svgWidth && width('sidebar-text')===sidebarWidth);
+check('stored 120%', w.localStorage.getItem(key)==='120');
+await load();
+check('reinstall restores 120% without compounding', Math.abs(size('body-text')-before['body-text']*1.2)<0.02);
+const dynamic = d.createElement('p'); dynamic.id='zoom-dynamic'; dynamic.textContent='Streaming text';
+d.getElementById('response').append(dynamic);
+await new Promise(resolve => setTimeout(resolve,200));
+check('dynamic content', Math.abs(size('zoom-dynamic')-before['body-text']*1.2)<0.02);
+press('Digit0');
+check('reset', ids.every(id => Math.abs(size(id)-before[id])<0.02));
+press('Equal');
+w.__CLAUDE_RESTYLE_STATE__.cleanup();
+check('cleanup restores sizes', ids.every(id => Math.abs(size(id)-before[id])<0.02));
+check('cleanup restores original inline style', d.getElementById('zoom-icon').style.fontFamily==='FixtureIcons' && !d.getElementById('zoom-icon').style.fontSize);
+w.localStorage.removeItem(key);
+document.getElementById('results').textContent = `${checks.filter(c=>c.ok).length}/${checks.length} passed\n`+checks.map(c=>`${c.ok?'PASS':'FAIL'} ${c.label}`).join('\n');
+</script>

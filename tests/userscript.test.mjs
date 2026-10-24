@@ -10,14 +10,24 @@ import { buildUserscript, DEFAULT_UPDATE_URL, parseArgs, readBrowserPayload, ren
 function browserContext(location = { protocol: "https:", hostname: "claude.ai", port: "" }) {
   const nodes = [];
   const menus = [];
-  const window = {};
+  const listeners = new Map();
+  const storage = new Map();
+  const window = {
+    addEventListener: (type, fn) => listeners.set(type, fn),
+    removeEventListener: (type, fn) => { if (listeners.get(type) === fn) listeners.delete(type); },
+    localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
+  };
   window.top = window.self = window;
   const document = {
     head: { appendChild(node) { nodes.push(node); } },
+    body: { appendChild() {} },
+    querySelectorAll: () => [],
     getElementById(id) { return nodes.find(node => node.id === id) ?? null; },
     createElement() {
       return {
         dataset: {},
+        style: {},
+        setAttribute() {},
         remove() {
           const index = nodes.indexOf(this);
           if (index !== -1) nodes.splice(index, 1);
@@ -25,7 +35,7 @@ function browserContext(location = { protocol: "https:", hostname: "claude.ai", 
       };
     },
   };
-  return { window, document, location, nodes, menus, GM_registerMenuCommand: (label, callback) => menus.push({ label, callback }) };
+  return { window, document, location, nodes, menus, listeners, storage, setTimeout: () => 1, clearTimeout() {}, MutationObserver: class { observe() {} disconnect() {} }, GM_registerMenuCommand: (label, callback) => menus.push({ label, callback }) };
 }
 
 test("standalone userscript embeds CSS literally and requests only its menu privilege", async () => {
@@ -40,7 +50,7 @@ test("standalone userscript embeds CSS literally and requests only its menu priv
   for (const key of ["updateURL", "downloadURL"]) {
     assert.equal(script.match(new RegExp(`^// @${key}\\s+(\\S+)$`, "m"))?.[1], DEFAULT_UPDATE_URL);
   }
-  assert.doesNotMatch(script, /\b(?:eval|fetch|MutationObserver|WebSocket)\(/);
+  assert.doesNotMatch(script, /\b(?:eval|fetch|WebSocket)\(/);
 });
 
 test("installation link and generated artifact use the repository's stable update URL and package version", async () => {
@@ -132,4 +142,43 @@ test("publishing metadata and CLI reject malformed input", () => {
   for (const args of [["--unknown"], ["--version"], ["--check", "--check"], ["--version", "--check"]]) {
     assert.throws(() => parseArgs(args));
   }
+});
+
+
+test("text zoom shortcuts clamp, persist, sync, reset and clean up", async () => {
+  const context = browserContext();
+  const key = "claude-restyle.textZoomPercent.v1";
+  context.storage.set(key, "120");
+  const script = renderUserscript({ payload: await readBrowserPayload("0.2.0"), version: "0.2.0" });
+  vm.runInNewContext(script, context);
+  const state = () => context.window.__CLAUDE_RESTYLE_STATE__;
+  assert.equal(state().zoomPercent, 120);
+  const press = (code, extra = {}) => {
+    let prevented = false;
+    context.listeners.get("keydown")({ code, ctrlKey: true, shiftKey: true,
+      preventDefault() { prevented = true; }, stopImmediatePropagation() {}, ...extra });
+    return prevented;
+  };
+  assert.equal(press("Equal", { isComposing: true }), false);
+  assert.equal(press("Equal", { metaKey: true }), false);
+  assert.equal(press("Equal", { shiftKey: false }), false);
+  assert.equal(press("KeyA"), false);
+  assert.equal(press("Equal"), true);
+  assert.equal(state().zoomPercent, 125);
+  assert.equal(context.storage.get(key), "125");
+  for (let i = 0; i < 50; i++) press("NumpadAdd");
+  assert.equal(state().zoomPercent, 160);
+  for (let i = 0; i < 50; i++) press("Minus");
+  assert.equal(state().zoomPercent, 60);
+  press("Digit0");
+  assert.equal(state().zoomPercent, 100);
+  context.listeners.get("storage")({ key, newValue: "135" });
+  assert.equal(state().zoomPercent, 135);
+  context.listeners.get("storage")({ key, newValue: "garbage" });
+  assert.equal(state().zoomPercent, 100);
+  press("Equal");
+  vm.runInNewContext(script, context);
+  assert.equal(state().zoomPercent, 105);
+  state().cleanup();
+  assert.equal(context.listeners.size, 0);
 });

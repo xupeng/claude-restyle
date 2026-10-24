@@ -78,7 +78,7 @@ export function renderUserscript({ payload, version, updateUrl = DEFAULT_UPDATE_
     "// @name         Claude Restyle",
     "// @namespace    https://github.com/xupeng/claude-restyle",
     `// @version      ${version}`,
-    "// @description  Custom fonts for Claude web messages, headings, code and sidebar",
+    "// @description  Custom fonts and persistent text-only zoom for Claude web",
     "// @homepageURL  https://github.com/xupeng/claude-restyle",
     ...CLAUDE_BROWSER_HOSTS.map((host) => `// @match        https://${host}/*`),
     "// @run-at       document-end",
