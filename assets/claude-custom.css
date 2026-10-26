@@ -3,21 +3,24 @@
 
 @font-face {
   font-family: "ClaudeRestyleBodyCJK";
-  src: local("LXGWWenKai-Light");
+  src: local("LXGWWenKai-Light"),
+    url("https://raw.githubusercontent.com/lxgw/LxgwWenKai/4a762d7594c823a1417b7d6b1de39fa5bfc8afd4/fonts/TTF/LXGWWenKai-Light.ttf") format("truetype");
   font-weight: 100 300;
   font-display: swap;
 }
 
 @font-face {
   font-family: "ClaudeRestyleBodyCJK";
-  src: local("LXGWWenKai-Medium");
+  src: local("LXGWWenKai-Medium"),
+    url("https://raw.githubusercontent.com/lxgw/LxgwWenKai/4a762d7594c823a1417b7d6b1de39fa5bfc8afd4/fonts/TTF/LXGWWenKai-Medium.ttf") format("truetype");
   font-weight: 301 500;
   font-display: swap;
 }
 
 @font-face {
   font-family: "ClaudeRestyleBodyCJK";
-  src: local("LXGW ZhenKai GB"), local("LXGWZhenKaiGB"), local("LXGW ZhenKai"), local("LXGWZhenKai-Regular");
+  src: local("LXGW ZhenKai GB"), local("LXGWZhenKaiGB-Regular"), local("LXGWZhenKaiGB"), local("LXGW ZhenKai"), local("LXGWZhenKai-Regular"), local("LXGWZhenKai"),
+    url("https://cdn.jsdelivr.net/npm/@fontpkg/lxgw-zhen-kai@0.60.0/LXGWZhenKai.ttf") format("truetype");
   font-weight: 501 900;
   font-display: swap;
 }

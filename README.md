@@ -69,16 +69,24 @@ ScriptCat 可检查更新并下载新脚本；更新检查频率及是否静默�
 
 Google Fonts 加载 Oxanium、Pridi、Signika 和 Noto Sans SC，需要网络连接；
 若希望完全离线使用，删除顶部 `@import` 并将变量改为本机字体。
-中文／代码字体使用 `local()`，需要本机已安装对应字体：
+中文／代码字体优先使用本机字体：
 
 - `LXGWWenKai-Light`、`LXGWWenKai-Medium`
 - `LXGW ZhenKai GB` / `LXGWZhenKaiGB`（兼容 `LXGW ZhenKai` / `LXGWZhenKai-Regular`）
 - `TsangerYunHei-W04` 至 `TsangerYunHei-W07`
 - `Cascadia Code NF` 或 `Cascadia Code`
 
-缺少字体或字体请求被浏览器限制时，按字体栈回退。公式保留自身排版字体，SVG
+Safari 的[字体隐私限制](https://webkit.org/tracking-prevention/)可能阻止网页使用用户安装的字体，
+因此正文的文楷／臻楷在 `local()` 后提供固定版本的网络字体后备，无需关闭隐私保护。
+文楷来自作者 GitHub 仓库（固定提交），臻楷来自 jsDelivr 的
+`@fontpkg/lxgw-zhen-kai@0.60.0`（旧版臻楷，非本机 GB 版，字形及字符覆盖可能不同）。
+字体仅在需要对应字重且本机字体不可用时下载；文楷单字重约 26 MB，臻楷约 3.7 MB，
+首次加载可能较慢，期间显示后备字体。仓耳云黑和 Cascadia 仍依赖本机字体。
+Safari Userscripts 扩展用户可将生成脚本的全部内容替换到原脚本，保存后刷新页面。
+
+缺少字体或网络字体请求被 CSP／网络限制时，按字体栈回退。公式保留自身排版字体，SVG
 图标保持原样。源码内嵌进用户脚本，不在运行时下载 JS 或 CSS 源文件；字体样式表
-与字体文件是上述 Google Fonts 网络请求的例外。
+与字体文件是上述 Google Fonts、GitHub Raw 和 jsDelivr 网络请求的例外。
 
 CSS 会自动作用于流式回复和 SPA 切换后的新内容，不读取会话数据，不使用页面内部
 对象或轮询。字号缩放使用 MutationObserver 合并处理动态内容，避免嵌套文字重复缩放。
