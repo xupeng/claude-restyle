@@ -43,12 +43,18 @@ ScriptCat 可检查更新并下载新脚本；更新检查频率及是否静默�
 | --- | --- |
 | `--claude-restyle-body-font` | 英文 Oxanium → Pridi；中文霞鹜文楷，粗体使用霞鹜臻楷 |
 | `--claude-restyle-heading-font` | 英文 Signika；中文仓耳云黑 W04–W07，随标题字重选择 |
-| `--claude-restyle-code-font` | Cascadia Code NF，启用连字；中文沿用正文映射 |
+| `--claude-restyle-code-font` | Cascadia Code PL → NF → Cascadia Code → 系统等宽字体，启用连字 |
 | `--claude-restyle-ui-font` | UI／侧栏英文 Oxanium → Pridi；中文使用系统字体 |
 
 正文默认 `500` 字重，消息段落行高 `1.8`（输入框保留原生行高）；保留加粗、斜体和标题字号层级。
 
 ### 文字缩放快捷键
+
+字体未生效时，按 `Ctrl + Shift + F` 打开字体诊断面板（macOS 使用 Control）。
+面板显示正在运行的脚本版本，并检测 Google Fonts 文楷 TC 300、中文正文映射 500、文楷 TC 700，显示成功、
+未匹配声明或浏览器返回的错误；也显示脚本运行期间捕获的字体站 CSS／字体 CSP 限制。
+检测不读取会话内容。加载成功不证明正文实际使用该字体；没有 CSP 记录也不能排除拦截。
+点击“关闭字体诊断”关闭面板。
 
 沿用 notion-restyle 的快捷键（macOS 也使用 Control，不是 Command）：
 
@@ -74,19 +80,25 @@ Google Fonts 加载 Oxanium、Pridi、Signika 和 Noto Sans SC，需要网络连
 - `LXGWWenKai-Light`、`LXGWWenKai-Medium`
 - `LXGW ZhenKai GB` / `LXGWZhenKaiGB`（兼容 `LXGW ZhenKai` / `LXGWZhenKai-Regular`）
 - `TsangerYunHei-W04` 至 `TsangerYunHei-W07`
-- `Cascadia Code NF` 或 `Cascadia Code`
+- `Cascadia Code PL`、`Cascadia Code NF` 或 `Cascadia Code`
 
 Safari 的[字体隐私限制](https://webkit.org/tracking-prevention/)可能阻止网页使用用户安装的字体，
-因此正文的文楷／臻楷在 `local()` 后提供固定版本的网络字体后备，无需关闭隐私保护。
-文楷来自作者 GitHub 仓库（固定提交），臻楷来自 jsDelivr 的
-`@fontpkg/lxgw-zhen-kai@0.60.0`（旧版臻楷，非本机 GB 版，字形及字符覆盖可能不同）。
-字体仅在需要对应字重且本机字体不可用时下载；文楷单字重约 26 MB，臻楷约 3.7 MB，
-首次加载可能较慢，期间显示后备字体。仓耳云黑和 Cascadia 仍依赖本机字体。
+因此正文中文在本机字体映射后使用 Google Fonts 的 `LXGW WenKai TC`，无需关闭隐私保护。
+字体 CSS 来自 `fonts.googleapis.com`，字体文件来自 `fonts.gstatic.com`，请求 300、400、700 字重。
+中文正文的 301–500 字重优先使用本机文楷 Medium，不可用时直接加载 Google Fonts 的文楷 TC 700，
+避免默认匹配 TC 400 导致中文比英文显得细浅；英文仍保持 500。该固定 v11 TTF 文件约 12.8 MB，首次加载需等待。
+本机臻楷不可用时，粗体也使用文楷 TC 700，因此网络后备的中文正文和粗体粗细差异会缩小。
+TC 版部分中文字形与原版文楷不同。
+网络字体格式和分片由 Google Fonts 根据浏览器提供。仓耳云黑仍依赖本机字体。
+代码优先使用本机 Cascadia Code PL／NF；Safari 无法读取时使用 Google Fonts 的 Cascadia Code（非 PL 版）。
+代码字体栈不包含文楷或其他比例字体，缺失的中文字形由浏览器按系统等宽后备处理。
+实际加载效果仍需在 Safari 验证；
+诊断面板的“未匹配到字体声明”也可能是字体 CSS 尚未载入或被拦截，稍后重新检测可区分加载延迟。
 Safari Userscripts 扩展用户可将生成脚本的全部内容替换到原脚本，保存后刷新页面。
 
 缺少字体或网络字体请求被 CSP／网络限制时，按字体栈回退。公式保留自身排版字体，SVG
 图标保持原样。源码内嵌进用户脚本，不在运行时下载 JS 或 CSS 源文件；字体样式表
-与字体文件是上述 Google Fonts、GitHub Raw 和 jsDelivr 网络请求的例外。
+与字体文件是上述 Google Fonts 网络请求的例外。
 
 CSS 会自动作用于流式回复和 SPA 切换后的新内容，不读取会话数据，不使用页面内部
 对象或轮询。字号缩放使用 MutationObserver 合并处理动态内容，避免嵌套文字重复缩放。

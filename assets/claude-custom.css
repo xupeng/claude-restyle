@@ -1,10 +1,11 @@
 /* 字体搭配沿用 notion-restyle；修改下方四个变量后重新构建用户脚本。 */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&family=Oxanium:wght@200..800&family=Pridi:wght@200;300;400;500;600;700&family=Signika:wght@300..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@200..700&display=swap');
 
 @font-face {
   font-family: "ClaudeRestyleBodyCJK";
-  src: local("LXGWWenKai-Light"),
-    url("https://raw.githubusercontent.com/lxgw/LxgwWenKai/4a762d7594c823a1417b7d6b1de39fa5bfc8afd4/fonts/TTF/LXGWWenKai-Light.ttf") format("truetype");
+  src: local("LXGWWenKai-Light");
   font-weight: 100 300;
   font-display: swap;
 }
@@ -12,15 +13,14 @@
 @font-face {
   font-family: "ClaudeRestyleBodyCJK";
   src: local("LXGWWenKai-Medium"),
-    url("https://raw.githubusercontent.com/lxgw/LxgwWenKai/4a762d7594c823a1417b7d6b1de39fa5bfc8afd4/fonts/TTF/LXGWWenKai-Medium.ttf") format("truetype");
+    url("https://fonts.gstatic.com/s/lxgwwenkaitc/v11/w8gAH20td8wNsI3f40DmtXZb4_M2Avkp.ttf") format("truetype");
   font-weight: 301 500;
   font-display: swap;
 }
 
 @font-face {
   font-family: "ClaudeRestyleBodyCJK";
-  src: local("LXGW ZhenKai GB"), local("LXGWZhenKaiGB-Regular"), local("LXGWZhenKaiGB"), local("LXGW ZhenKai"), local("LXGWZhenKai-Regular"), local("LXGWZhenKai"),
-    url("https://cdn.jsdelivr.net/npm/@fontpkg/lxgw-zhen-kai@0.60.0/LXGWZhenKai.ttf") format("truetype");
+  src: local("LXGW ZhenKai GB"), local("LXGWZhenKaiGB-Regular"), local("LXGWZhenKaiGB"), local("LXGW ZhenKai"), local("LXGWZhenKai-Regular"), local("LXGWZhenKai");
   font-weight: 501 900;
   font-display: swap;
 }
@@ -54,9 +54,9 @@
 }
 
 :root {
-  --claude-restyle-body-font: "Oxanium", "Pridi", "ClaudeRestyleBodyCJK", "Noto Sans SC", STKaiti, system-ui, sans-serif;
+  --claude-restyle-body-font: "Oxanium", "Pridi", "ClaudeRestyleBodyCJK", "LXGW WenKai TC", "Noto Sans SC", STKaiti, system-ui, sans-serif;
   --claude-restyle-heading-font: "Signika", "ClaudeRestyleHeadingCJK", "Noto Sans SC", "PingFang SC", sans-serif;
-  --claude-restyle-code-font: "Cascadia Code NF", "Cascadia Code", Consolas, "ClaudeRestyleBodyCJK", "Noto Sans SC", monospace;
+  --claude-restyle-code-font: "Cascadia Code PL", "Cascadia Code NF", "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   /* UI / 侧栏不引入自定义中文字体，保留系统中文。 */
   --claude-restyle-ui-font: "Oxanium", "Pridi", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -79,6 +79,7 @@ body,
     :where(pre *, code *, kbd *, samp *, .katex, .katex *, .MathJax, .MathJax *, mjx-container, mjx-container *)
   ) {
   font-family: var(--claude-restyle-body-font) !important;
+  font-synthesis-weight: none;
 }
 
 :where(.prose, .standard-markdown, .font-claude-response, .font-claude-message,
@@ -113,5 +114,6 @@ main > :where(h1, h2),
 :where(pre, code, kbd, samp, .font-mono, .cm-editor, .monaco-editor)
   :where(span, div, code, p, textarea):not(:where(.katex *, .MathJax *, mjx-container *)) {
   font-family: var(--claude-restyle-code-font) !important;
+  font-synthesis-weight: none;
   font-feature-settings: "liga" 1, "calt" 1;
 }

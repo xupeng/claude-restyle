@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Claude Restyle
 // @namespace    https://github.com/xupeng/claude-restyle
-// @version      0.2.3
+// @version      0.2.4
 // @description  Custom fonts and persistent text-only zoom for Claude web
 // @homepageURL  https://github.com/xupeng/claude-restyle
 // @match        https://claude.ai/*
@@ -51,6 +51,49 @@
   let toastTimer;
   let toast;
   let active = true;
+  let diagnostics;
+  const fontViolations = new Set();
+  const onPolicyViolation = event => {
+    if (!["font-src", "style-src", "style-src-elem"].includes(event.effectiveDirective)) return;
+    try {
+      const blocked = new URL(event.blockedURI);
+      if (["fonts.googleapis.com", "fonts.gstatic.com"].includes(blocked.hostname)) {
+        fontViolations.add(`${blocked.hostname} (${event.effectiveDirective})：${event.disposition === "report" ? "仅报告" : "阻止"}`);
+      }
+    } catch {}
+  };
+  window.addEventListener("securitypolicyviolation", onPolicyViolation);
+  const showDiagnostics = () => {
+    diagnostics?.remove();
+    const panel = document.createElement("div");
+    diagnostics = panel;
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "Claude Restyle 字体诊断");
+    panel.style.cssText = "position:fixed;top:20px;right:20px;z-index:2147483647;max-width:440px;max-height:80vh;overflow:auto;padding:20px;background:white;color:#222;border:1px solid #888;border-radius:12px;box-shadow:0 4px 24px #0003;font:14px/1.6 system-ui;white-space:pre-wrap";
+    const close = document.createElement("button");
+    close.textContent = "关闭字体诊断";
+    close.onclick = () => { panel.remove(); if (diagnostics === panel) diagnostics = undefined; };
+    const output = document.createElement("div");
+    panel.appendChild(close);
+    panel.appendChild(output);
+    document.body.appendChild(panel);
+    const results = ["文楷 TC 300：检测中", "中文正文 500（本机 Medium／TC 700）：检测中", "文楷 TC 粗体 700：检测中"];
+    const render = () => {
+      output.textContent = `Claude Restyle ${version}\n${results.join("\n")}\n\n字体策略记录：${[...fontViolations].join("；") || "未捕获到拦截（不代表没有限制）"}\n\n检测仅加载脚本声明的字体，不读取会话。加载成功不等于正文实际使用；失败详情由浏览器提供，无法仅凭失败判定是网络、CORS 或 CSP。大字体可能需要较长时间。`;
+    };
+    render();
+    [300, 500, 700].forEach(async (weight, index) => {
+      const label = ["文楷 TC 300", "中文正文 500（本机 Medium／TC 700）", "文楷 TC 粗体 700"][index];
+      try {
+        const family = weight === 500 ? "ClaudeRestyleBodyCJK" : "LXGW WenKai TC";
+        const faces = await document.fonts.load(`${weight} 16px "${family}"`, "中文字体诊断");
+        results[index] = `${label}：${faces.length ? "加载成功" : "未匹配到字体声明"}`;
+      } catch (error) {
+        results[index] = `${label}：加载失败（${error.name}: ${error.message}）`;
+      }
+      render();
+    });
+  };
   const restore = () => {
     for (const [element, original] of originals) {
       if (element.style.getPropertyValue("font-size") !== original.applied) continue;
@@ -142,6 +185,12 @@
   };
   const onKeyDown = event => {
     if (event.isComposing || !event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return;
+    if (event.code === "KeyF") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      showDiagnostics();
+      return;
+    }
     let next;
     if (["Equal", "NumpadAdd"].includes(event.code)) next = percent + 5;
     else if (["Minus", "NumpadSubtract"].includes(event.code)) next = percent - 5;
@@ -165,6 +214,7 @@
 
   const state = {
     version,
+    showDiagnostics,
     get zoomPercent() { return percent; },
     cleanup() {
       active = false;
@@ -173,6 +223,8 @@
       clearTimeout(toastTimer);
       window.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("storage", onStorage);
+      window.removeEventListener("securitypolicyviolation", onPolicyViolation);
+      diagnostics?.remove();
       toast?.remove();
       restore();
       style.remove();
@@ -180,7 +232,7 @@
     },
   };
   window[STATE_KEY] = state;
-})("/* 字体搭配沿用 notion-restyle；修改下方四个变量后重新构建用户脚本。 */\n@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&family=Oxanium:wght@200..800&family=Pridi:wght@200;300;400;500;600;700&family=Signika:wght@300..700&display=swap');\n\n@font-face {\n  font-family: \"ClaudeRestyleBodyCJK\";\n  src: local(\"LXGWWenKai-Light\"),\n    url(\"https://raw.githubusercontent.com/lxgw/LxgwWenKai/4a762d7594c823a1417b7d6b1de39fa5bfc8afd4/fonts/TTF/LXGWWenKai-Light.ttf\") format(\"truetype\");\n  font-weight: 100 300;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleBodyCJK\";\n  src: local(\"LXGWWenKai-Medium\"),\n    url(\"https://raw.githubusercontent.com/lxgw/LxgwWenKai/4a762d7594c823a1417b7d6b1de39fa5bfc8afd4/fonts/TTF/LXGWWenKai-Medium.ttf\") format(\"truetype\");\n  font-weight: 301 500;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleBodyCJK\";\n  src: local(\"LXGW ZhenKai GB\"), local(\"LXGWZhenKaiGB-Regular\"), local(\"LXGWZhenKaiGB\"), local(\"LXGW ZhenKai\"), local(\"LXGWZhenKai-Regular\"), local(\"LXGWZhenKai\"),\n    url(\"https://cdn.jsdelivr.net/npm/@fontpkg/lxgw-zhen-kai@0.60.0/LXGWZhenKai.ttf\") format(\"truetype\");\n  font-weight: 501 900;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleHeadingCJK\";\n  src: local(\"TsangerYunHei-W04\");\n  font-weight: 100 400;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleHeadingCJK\";\n  src: local(\"TsangerYunHei-W05\");\n  font-weight: 401 500;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleHeadingCJK\";\n  src: local(\"TsangerYunHei-W06\");\n  font-weight: 501 600;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleHeadingCJK\";\n  src: local(\"TsangerYunHei-W07\");\n  font-weight: 601 900;\n  font-display: swap;\n}\n\n:root {\n  --claude-restyle-body-font: \"Oxanium\", \"Pridi\", \"ClaudeRestyleBodyCJK\", \"Noto Sans SC\", STKaiti, system-ui, sans-serif;\n  --claude-restyle-heading-font: \"Signika\", \"ClaudeRestyleHeadingCJK\", \"Noto Sans SC\", \"PingFang SC\", sans-serif;\n  --claude-restyle-code-font: \"Cascadia Code NF\", \"Cascadia Code\", Consolas, \"ClaudeRestyleBodyCJK\", \"Noto Sans SC\", monospace;\n  /* UI / 侧栏不引入自定义中文字体，保留系统中文。 */\n  --claude-restyle-ui-font: \"Oxanium\", \"Pridi\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif;\n}\n\n/* UI 字体从容器继承。不要覆盖后代 span/div 的 font-family：\n   Claude 的字体图标需要保留自身字体，否则会显示为缺字条纹。 */\nbody,\n:where(.font-sans, .font-control, .font-voice),\n:where(aside[aria-label=\"Sidebar\"], [data-testid=\"sidebar\"]) {\n  font-family: var(--claude-restyle-ui-font) !important;\n}\n\n/* 普通 Chat 与网页 Code 共用消息锚点；旧版字体类名作为兼容入口。\n   不使用哈希类名，也不改变 Artifacts iframe 中的内容。 */\n:where(.prose, .standard-markdown, .font-claude-response, .font-claude-message,\n  [data-testid=\"user-message\"], [contenteditable=\"true\"], #static-composer-input),\n:where(.prose, .standard-markdown, .font-claude-response, .font-claude-message,\n  [data-testid=\"user-message\"], [contenteditable=\"true\"])\n  :where(p, span, div, a, li, ul, ol, blockquote, td, th, strong, b, em, i, del, summary, label):not(\n    :where(pre *, code *, kbd *, samp *, .katex, .katex *, .MathJax, .MathJax *, mjx-container, mjx-container *)\n  ) {\n  font-family: var(--claude-restyle-body-font) !important;\n}\n\n:where(.prose, .standard-markdown, .font-claude-response, .font-claude-message,\n  [data-testid=\"user-message\"], [contenteditable=\"true\"], #static-composer-input) {\n  font-weight: 500;\n}\n\n/* 消息段落使用阅读行高；输入框保留原生行高与垂直对齐。 */\n:where(.prose, .standard-markdown, [data-testid=\"user-message\"])\n  :where(p, li, blockquote):not(:where(pre *, .katex *, .MathJax *, mjx-container *,\n    [contenteditable=\"true\"], [contenteditable=\"true\"] *, #static-composer-input, #static-composer-input *)) {\n  line-height: 1.8 !important;\n}\n\n:where(.prose, .standard-markdown, [data-testid=\"user-message\"], [contenteditable=\"true\"])\n  :where(strong, b):not(:where(pre *, code *, .katex *, .MathJax *, mjx-container *)) {\n  font-weight: 700 !important;\n}\n\n/* 标题后置，覆盖标题内嵌的链接、强调等元素；内嵌 code 仍用等宽字体。 */\n:where(.prose, .standard-markdown) :where(h1, h2, h3, h4, h5, h6),\n:where(.prose, .standard-markdown) :where(h1, h2, h3, h4, h5, h6)\n  :where(span, a, strong, b, em, i),\nmain > :where(h1, h2),\n[role=\"toolbar\"] :where(h1, h2),\n[role=\"toolbar\"] :where(h1, h2) :where(button, span) {\n  font-family: var(--claude-restyle-heading-font) !important;\n}\n\n/* 内联代码、代码块及网页代码编辑器。公式和 SVG 图标不应用通配字体。 */\n:where(pre, code, kbd, samp, .font-mono, .cm-editor, .monaco-editor),\n:where(pre, code, kbd, samp, .font-mono, .cm-editor, .monaco-editor)\n  :where(span, div, code, p, textarea):not(:where(.katex *, .MathJax *, mjx-container *)) {\n  font-family: var(--claude-restyle-code-font) !important;\n  font-feature-settings: \"liga\" 1, \"calt\" 1;\n}\n", "0.2.3")
+})("/* 字体搭配沿用 notion-restyle；修改下方四个变量后重新构建用户脚本。 */\n@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&family=Oxanium:wght@200..800&family=Pridi:wght@200;300;400;500;600;700&family=Signika:wght@300..700&display=swap');\n@import url('https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&display=swap');\n@import url('https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@200..700&display=swap');\n\n@font-face {\n  font-family: \"ClaudeRestyleBodyCJK\";\n  src: local(\"LXGWWenKai-Light\");\n  font-weight: 100 300;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleBodyCJK\";\n  src: local(\"LXGWWenKai-Medium\"),\n    url(\"https://fonts.gstatic.com/s/lxgwwenkaitc/v11/w8gAH20td8wNsI3f40DmtXZb4_M2Avkp.ttf\") format(\"truetype\");\n  font-weight: 301 500;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleBodyCJK\";\n  src: local(\"LXGW ZhenKai GB\"), local(\"LXGWZhenKaiGB-Regular\"), local(\"LXGWZhenKaiGB\"), local(\"LXGW ZhenKai\"), local(\"LXGWZhenKai-Regular\"), local(\"LXGWZhenKai\");\n  font-weight: 501 900;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleHeadingCJK\";\n  src: local(\"TsangerYunHei-W04\");\n  font-weight: 100 400;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleHeadingCJK\";\n  src: local(\"TsangerYunHei-W05\");\n  font-weight: 401 500;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleHeadingCJK\";\n  src: local(\"TsangerYunHei-W06\");\n  font-weight: 501 600;\n  font-display: swap;\n}\n\n@font-face {\n  font-family: \"ClaudeRestyleHeadingCJK\";\n  src: local(\"TsangerYunHei-W07\");\n  font-weight: 601 900;\n  font-display: swap;\n}\n\n:root {\n  --claude-restyle-body-font: \"Oxanium\", \"Pridi\", \"ClaudeRestyleBodyCJK\", \"LXGW WenKai TC\", \"Noto Sans SC\", STKaiti, system-ui, sans-serif;\n  --claude-restyle-heading-font: \"Signika\", \"ClaudeRestyleHeadingCJK\", \"Noto Sans SC\", \"PingFang SC\", sans-serif;\n  --claude-restyle-code-font: \"Cascadia Code PL\", \"Cascadia Code NF\", \"Cascadia Code\", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;\n  /* UI / 侧栏不引入自定义中文字体，保留系统中文。 */\n  --claude-restyle-ui-font: \"Oxanium\", \"Pridi\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif;\n}\n\n/* UI 字体从容器继承。不要覆盖后代 span/div 的 font-family：\n   Claude 的字体图标需要保留自身字体，否则会显示为缺字条纹。 */\nbody,\n:where(.font-sans, .font-control, .font-voice),\n:where(aside[aria-label=\"Sidebar\"], [data-testid=\"sidebar\"]) {\n  font-family: var(--claude-restyle-ui-font) !important;\n}\n\n/* 普通 Chat 与网页 Code 共用消息锚点；旧版字体类名作为兼容入口。\n   不使用哈希类名，也不改变 Artifacts iframe 中的内容。 */\n:where(.prose, .standard-markdown, .font-claude-response, .font-claude-message,\n  [data-testid=\"user-message\"], [contenteditable=\"true\"], #static-composer-input),\n:where(.prose, .standard-markdown, .font-claude-response, .font-claude-message,\n  [data-testid=\"user-message\"], [contenteditable=\"true\"])\n  :where(p, span, div, a, li, ul, ol, blockquote, td, th, strong, b, em, i, del, summary, label):not(\n    :where(pre *, code *, kbd *, samp *, .katex, .katex *, .MathJax, .MathJax *, mjx-container, mjx-container *)\n  ) {\n  font-family: var(--claude-restyle-body-font) !important;\n  font-synthesis-weight: none;\n}\n\n:where(.prose, .standard-markdown, .font-claude-response, .font-claude-message,\n  [data-testid=\"user-message\"], [contenteditable=\"true\"], #static-composer-input) {\n  font-weight: 500;\n}\n\n/* 消息段落使用阅读行高；输入框保留原生行高与垂直对齐。 */\n:where(.prose, .standard-markdown, [data-testid=\"user-message\"])\n  :where(p, li, blockquote):not(:where(pre *, .katex *, .MathJax *, mjx-container *,\n    [contenteditable=\"true\"], [contenteditable=\"true\"] *, #static-composer-input, #static-composer-input *)) {\n  line-height: 1.8 !important;\n}\n\n:where(.prose, .standard-markdown, [data-testid=\"user-message\"], [contenteditable=\"true\"])\n  :where(strong, b):not(:where(pre *, code *, .katex *, .MathJax *, mjx-container *)) {\n  font-weight: 700 !important;\n}\n\n/* 标题后置，覆盖标题内嵌的链接、强调等元素；内嵌 code 仍用等宽字体。 */\n:where(.prose, .standard-markdown) :where(h1, h2, h3, h4, h5, h6),\n:where(.prose, .standard-markdown) :where(h1, h2, h3, h4, h5, h6)\n  :where(span, a, strong, b, em, i),\nmain > :where(h1, h2),\n[role=\"toolbar\"] :where(h1, h2),\n[role=\"toolbar\"] :where(h1, h2) :where(button, span) {\n  font-family: var(--claude-restyle-heading-font) !important;\n}\n\n/* 内联代码、代码块及网页代码编辑器。公式和 SVG 图标不应用通配字体。 */\n:where(pre, code, kbd, samp, .font-mono, .cm-editor, .monaco-editor),\n:where(pre, code, kbd, samp, .font-mono, .cm-editor, .monaco-editor)\n  :where(span, div, code, p, textarea):not(:where(.katex *, .MathJax *, mjx-container *)) {\n  font-family: var(--claude-restyle-code-font) !important;\n  font-synthesis-weight: none;\n  font-feature-settings: \"liga\" 1, \"calt\" 1;\n}\n", "0.2.4")
 ;
 
   if (!window.__CLAUDE_RESTYLE_MENU_REGISTERED__) {

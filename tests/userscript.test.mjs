@@ -27,6 +27,8 @@ function browserContext(location = { protocol: "https:", hostname: "claude.ai", 
       return {
         dataset: {},
         style: {},
+        children: [],
+        appendChild(node) { this.children.push(node); },
         setAttribute() {},
         remove() {
           const index = nodes.indexOf(this);
@@ -180,5 +182,30 @@ test("text zoom shortcuts clamp, persist, sync, reset and clean up", async () =>
   vm.runInNewContext(script, context);
   assert.equal(state().zoomPercent, 105);
   state().cleanup();
+  assert.equal(context.listeners.size, 0);
+});
+
+test("font diagnostics reports loaded, missing and rejected faces without reading messages", async () => {
+  const context = browserContext();
+  let panel;
+  context.document.body.appendChild = node => { panel = node; };
+  context.document.fonts = {
+    async load(font, sample) {
+      assert.equal(sample, "中文字体诊断");
+      assert.ok(font.includes(font.startsWith("500") ? '"ClaudeRestyleBodyCJK"' : '"LXGW WenKai TC"'));
+      if (font.startsWith("300")) return [{}];
+      if (font.startsWith("500")) return [];
+      throw new Error("Font load failed");
+    },
+  };
+  vm.runInNewContext(renderUserscript({ payload: await readBrowserPayload("0.2.4"), version: "0.2.4" }), context);
+  context.listeners.get("keydown")({ code: "KeyF", ctrlKey: true, shiftKey: true,
+    preventDefault() {}, stopImmediatePropagation() {} });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(panel.children[1].textContent, /Claude Restyle 0\.2\.4/);
+  assert.match(panel.children[1].textContent, /文楷 TC 300：加载成功/);
+  assert.match(panel.children[1].textContent, /中文正文 500（本机 Medium／TC 700）：未匹配到字体声明/);
+  assert.match(panel.children[1].textContent, /文楷 TC 粗体 700：加载失败（Error: Font load failed）/);
+  context.window.__CLAUDE_RESTYLE_STATE__.cleanup();
   assert.equal(context.listeners.size, 0);
 });

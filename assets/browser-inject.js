@@ -26,6 +26,49 @@
   let toastTimer;
   let toast;
   let active = true;
+  let diagnostics;
+  const fontViolations = new Set();
+  const onPolicyViolation = event => {
+    if (!["font-src", "style-src", "style-src-elem"].includes(event.effectiveDirective)) return;
+    try {
+      const blocked = new URL(event.blockedURI);
+      if (["fonts.googleapis.com", "fonts.gstatic.com"].includes(blocked.hostname)) {
+        fontViolations.add(`${blocked.hostname} (${event.effectiveDirective})：${event.disposition === "report" ? "仅报告" : "阻止"}`);
+      }
+    } catch {}
+  };
+  window.addEventListener("securitypolicyviolation", onPolicyViolation);
+  const showDiagnostics = () => {
+    diagnostics?.remove();
+    const panel = document.createElement("div");
+    diagnostics = panel;
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "Claude Restyle 字体诊断");
+    panel.style.cssText = "position:fixed;top:20px;right:20px;z-index:2147483647;max-width:440px;max-height:80vh;overflow:auto;padding:20px;background:white;color:#222;border:1px solid #888;border-radius:12px;box-shadow:0 4px 24px #0003;font:14px/1.6 system-ui;white-space:pre-wrap";
+    const close = document.createElement("button");
+    close.textContent = "关闭字体诊断";
+    close.onclick = () => { panel.remove(); if (diagnostics === panel) diagnostics = undefined; };
+    const output = document.createElement("div");
+    panel.appendChild(close);
+    panel.appendChild(output);
+    document.body.appendChild(panel);
+    const results = ["文楷 TC 300：检测中", "中文正文 500（本机 Medium／TC 700）：检测中", "文楷 TC 粗体 700：检测中"];
+    const render = () => {
+      output.textContent = `Claude Restyle ${version}\n${results.join("\n")}\n\n字体策略记录：${[...fontViolations].join("；") || "未捕获到拦截（不代表没有限制）"}\n\n检测仅加载脚本声明的字体，不读取会话。加载成功不等于正文实际使用；失败详情由浏览器提供，无法仅凭失败判定是网络、CORS 或 CSP。大字体可能需要较长时间。`;
+    };
+    render();
+    [300, 500, 700].forEach(async (weight, index) => {
+      const label = ["文楷 TC 300", "中文正文 500（本机 Medium／TC 700）", "文楷 TC 粗体 700"][index];
+      try {
+        const family = weight === 500 ? "ClaudeRestyleBodyCJK" : "LXGW WenKai TC";
+        const faces = await document.fonts.load(`${weight} 16px "${family}"`, "中文字体诊断");
+        results[index] = `${label}：${faces.length ? "加载成功" : "未匹配到字体声明"}`;
+      } catch (error) {
+        results[index] = `${label}：加载失败（${error.name}: ${error.message}）`;
+      }
+      render();
+    });
+  };
   const restore = () => {
     for (const [element, original] of originals) {
       if (element.style.getPropertyValue("font-size") !== original.applied) continue;
@@ -117,6 +160,12 @@
   };
   const onKeyDown = event => {
     if (event.isComposing || !event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return;
+    if (event.code === "KeyF") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      showDiagnostics();
+      return;
+    }
     let next;
     if (["Equal", "NumpadAdd"].includes(event.code)) next = percent + 5;
     else if (["Minus", "NumpadSubtract"].includes(event.code)) next = percent - 5;
@@ -140,6 +189,7 @@
 
   const state = {
     version,
+    showDiagnostics,
     get zoomPercent() { return percent; },
     cleanup() {
       active = false;
@@ -148,6 +198,8 @@
       clearTimeout(toastTimer);
       window.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("storage", onStorage);
+      window.removeEventListener("securitypolicyviolation", onPolicyViolation);
+      diagnostics?.remove();
       toast?.remove();
       restore();
       style.remove();
